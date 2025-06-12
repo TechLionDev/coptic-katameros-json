@@ -1,4 +1,3 @@
-// filepath: c:\Users\techl\Github\coptic-katameros-xlsx\index.ts
 import { consola } from "consola";
 import * as XLSX from 'xlsx';
 
@@ -19,6 +18,8 @@ interface CategorizedReferences {
 }
 
 function categorizeReference(reference: string): {type: string, ref: string} {
+  const book = reference.split(' ')[0];
+  
   // Catholic Epistles
   const catholicEpistles = ['James', '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude'];
   if (catholicEpistles.some(epistle => reference.startsWith(epistle))) {
@@ -82,9 +83,10 @@ async function getReferences(startDate: string, endDate: string) {
   }
 
   const result: SimpleDayReferences[] = [];
-  const categorizedResult: CategorizedReferences[] = [];
 
-  consola.info(`Extracting liturgy references from ${startDate} to ${endDate}...`);
+  consola.info(
+    `Extracting liturgy references from ${startDate} to ${endDate}...`
+  );
 
   // Generate date range
   const startDateObj = new Date(start.year, start.month - 1, start.day);
@@ -122,7 +124,7 @@ async function getReferences(startDate: string, endDate: string) {
       const data: any = await response.json();
       const references: string[] = [];
 
-      // Extract fullReference strings from ONLY the Liturgy section
+      // Extract fullReference strings from ONLY the Liturgy section (id: 3)
       if (data.sections) {
         for (const section of data.sections) {
           // Only process the Liturgy section
@@ -145,45 +147,11 @@ async function getReferences(startDate: string, endDate: string) {
         }
       }
 
-      // Categorize references for Excel
-      const categorized: CategorizedReferences = {
-        gregorianDate: dateStr,
-        copticDate: data.copticDate || "N/A",
-        catholicEpistle: [],
-        paulineEpistle: [],
-        acts: [],
-        psalm: [],
-        gospel: []
-      };
-
-      references.forEach(ref => {
-        const {type, ref: reference} = categorizeReference(ref);
-        switch(type) {
-          case 'catholicEpistle':
-            categorized.catholicEpistle.push(reference);
-            break;
-          case 'paulineEpistle':
-            categorized.paulineEpistle.push(reference);
-            break;
-          case 'acts':
-            categorized.acts.push(reference);
-            break;
-          case 'psalm':
-            categorized.psalm.push(reference);
-            break;
-          case 'gospel':
-            categorized.gospel.push(reference);
-            break;
-        }
-      });
-
       result.push({
         gregorianDate: dateStr,
         copticDate: data.copticDate || "N/A",
         references: references,
       });
-
-      categorizedResult.push(categorized);
 
       consola.success(`  Found ${references.length} liturgy references`);
 
@@ -200,27 +168,7 @@ async function getReferences(startDate: string, endDate: string) {
   const outputPath = "./out.json";
   await Bun.write(outputPath, JSON.stringify(result, null, 2));
 
-  // Create Excel file
-  const excelData = categorizedResult.map(day => ({
-    'Date': day.gregorianDate,
-    'Coptic Date': day.copticDate,
-    'Catholic Epistle': day.catholicEpistle.join('; '),
-    'Pauline Epistle': day.paulineEpistle.join('; '),
-    'Acts': day.acts.join('; '),
-    'Psalm': day.psalm.join('; '),
-    'Gospel': day.gospel.join('; ')
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Liturgy References");
-  
-  const excelPath = "./out.xlsx";
-  XLSX.writeFile(workbook, excelPath);
-
-  consola.success(`\nSaved liturgy references to:`);
-  consola.info(`JSON: ${outputPath}`);
-  consola.info(`Excel: ${excelPath}`);
+  consola.success(`\nSaved liturgy references to: ${outputPath}`);
   consola.info(`Total days processed: ${result.length}`);
   consola.info(
     `Total liturgy references found: ${result.reduce(
