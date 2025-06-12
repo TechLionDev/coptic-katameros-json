@@ -90,48 +90,6 @@ function parseDate(
   return { day, month, year };
 }
 
-function formatCopticDate(copticDateStr: string): string {
-  if (!copticDateStr || copticDateStr === "N/A") {
-    return "N/A";
-  }
-
-  // Coptic month names
-  const copticMonths = [
-    "Thout",
-    "Paopi",
-    "Hathor",
-    "Kiahk",
-    "Toba",
-    "Meshir",
-    "Paremhat",
-    "Paremoude",
-    "Pashons",
-    "Paona",
-    "Epep",
-    "Mesra",
-    "Nasie",
-  ];
-
-  // Parse the coptic date format "DD/MM/YYYY"
-  const parts = copticDateStr.split("/");
-  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
-    return copticDateStr; // Return original if format is unexpected
-  }
-
-  const day = parseInt(parts[0]);
-  const month = parseInt(parts[1]);
-  const year = parseInt(parts[2]);
-
-  if (isNaN(day) || isNaN(month) || isNaN(year) || month < 1 || month > 13) {
-    return copticDateStr; // Return original if parsing fails
-  }
-
-  const monthName = copticMonths[month - 1]; // Convert to 0-based index
-  const formattedDay = day.toString().padStart(2, "0");
-
-  return `${monthName} ${formattedDay}, ${year}`;
-}
-
 async function getReferences(startDate: string, endDate: string) {
   const baseUrl = "https://api.katameros.app/readings/gregorian";
   const languageId = 2; // English
@@ -208,10 +166,12 @@ async function getReferences(startDate: string, endDate: string) {
             }
           }
         }
-      } // Categorize references for Excel
+      }
+
+      // Categorize references for Excel
       const categorized: CategorizedReferences = {
         gregorianDate: dateStr,
-        copticDate: formatCopticDate(data.copticDate || "N/A"),
+        copticDate: data.copticDate || "N/A",
         catholicEpistle: [],
         paulineEpistle: [],
         acts: [],
@@ -239,9 +199,10 @@ async function getReferences(startDate: string, endDate: string) {
             break;
         }
       });
+
       result.push({
         gregorianDate: dateStr,
-        copticDate: formatCopticDate(data.copticDate || "N/A"),
+        copticDate: data.copticDate || "N/A",
         references: references,
       });
 
